@@ -1,0 +1,138 @@
+---
+title:  |
+  ![](Logo_UCO.png){width='15%'}
+  Cantares gallegos
+  ![](Logo_FacCiencias.png){width='15%'}
+author: "Rosalía de Castro"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: True #toc sirve para añadir una tabla de contenido
+    number_sections: True #Te enumera las secciones que tiene
+bibliography: ["zotero.bib", "libraries.bib"]
+link-citations: true
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r dependecias, include=FALSE, warning=FALSE}
+library(readxl)
+library(dplyr)
+library(ggplot2)
+```
+
+<!-- Aqui simplemente estamos importando las librerias -->
+
+# Introducción
+
+## El trabajo seleccionado
+
+Vamos a trabajar con los datos de @perez2024phenotypic Este trabajo
+describe [genes candidatos]{style="color:green"} de la floración en
+[garbanzo]{style="color:red"} (*Cicer arietinum*) como ***MED16***,
+***BBX24*** o ***ELF3***, este último también reportado por otros
+estudios como @ridge_chickpea_2017. Los mecanismos básicos de floración
+estudiados en la planta modelo *Arabidopsis thaliana* están conservados
+en las leguminosas (@weller_genetic_2019, @hecht_conservation_2005,
+@weller_genetic_2015), exceptuando ciertos genes como ***CONSTANS***
+(@wong_isolation_2014).
+<!-- Estamos añadiendo formatos especificos a algunas palabras y ademas citas, si pones 3 * haces negrita y cursiva, si la bibliografia está bien cargada poniendo @ seria suficiente -->
+## Los datos
+
+```{r leer archivo y tabla, echo=FALSE, warning=FALSE}
+Data <- read_excel("12870_2024_5411_MOESM1_ESM.xlsx", 
+    skip = 1)
+Columnas <- Data %>% 
+  select(CHROM, POS, FILTER)
+knitr::kable(head(Columnas, 8), aling = 'c', caption= "Tabla 1. Ocho primeras filas")
+```
+<!-- He escogido solo las lineas que vamos a usar para nuestro pequeño experimento -->
+Los datos tienen `r nrow(Data)` filas y `r ncol(Data)` columnas. Cada
+fila se corresponde con un SNP, por tanto, hay `r nrow(Data)` SNPs.
+
+Aquí el link donde se encuentran estos datos
+<https://bmcplantbiol.biomedcentral.com/articles/10.1186/s12870-024-05411-y>
+
+[O dale aquí
+directamente](https://bmcplantbiol.biomedcentral.com/articles/10.1186/s12870-024-05411-y)
+<!-- Estamos añadiendo nrow y ncol para contar las filas y columnas respectivamente, decimos que SNPs es el numero de filas porque cada fila es cada SNP -->
+
+```{r procesado de datos, echo=FALSE, warning=FALSE}
+Data <- Data %>% filter(CHROM %in% c("NC_021160.1","NC_021161.1",
+"NC_021162.1", "NC_021163.1", "NC_021164.1",
+"NC_021165.1","NC_021166.1", "NC_021167.1"))
+```
+
+Del total de SNPs detectados, `r nrow(Data)` se corresponden con SNPs
+situados en cromosomas.
+
+```{r ordenar datos, echo=FALSE, fig.cap="Figura 1. Número de SNPs por cromosomas*", fig.align='center', out.width='65%'}
+Cromosoma <- Data %>% 
+  count(CHROM, sort = T)
+
+Cromosoma %>% 
+  ggplot(aes(x = CHROM, y = n, fill = CHROM)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Nº del cromosoma", y = "Cantidad") +
+  theme(legend.position = "none")
+```
+
+## Hipotesis
+
+Los cromosomas con mayor número de SNPs presentan mayor % de SNPs que no
+pasan el filtro de calidad.
+
+# Materiales y metodos
+
+Para llevar a cabo el análisis usamos R [@R-base] con las librerias
+dplyr [@R-dplyr] y ggplot [@ggplot22016; @R-ggplot2]
+
+# Resultados
+
+```{r filtrado de datos, echo=FALSE, warning=FALSE}
+Datosfiltrados <- Data %>% 
+  select(CHROM, POS, FILTER)
+DatosfiltradosNP <- Datosfiltrados %>% 
+  mutate(NOTPASS = ifelse(FILTER == "PASS", "PASS", "NOTPASS"))
+```
+
+Nos quedamos con las siguientes columnas: En CHROM aparecen los
+diferentes cromosomas del garbanzo, en POS aparecen las posiciones de
+los SNPs detectados y en FILTER aparece el filtro de calidad. Los SNPs
+que pasan el filtro aparecen descritos como PASS.
+
+## Cálculo de porcentajes por cromosoma
+
+```{r Calculos, echo=FALSE, warning=FALSE}
+Caluclos <- DatosfiltradosNP %>% 
+  group_by(CHROM) %>% 
+  summarise( Total_SNPs = n(),
+             SNPs_NOTPASS = sum(NOTPASS == "NOTPASS"),
+             PORCENTAJE = (SNPs_NOTPASS / Total_SNPs)*100)
+knitr::kable(Caluclos, align = 'c', caption = 'Tabla 2.
+Porcentaje de SNPs que pasan y no pasan el filtro por cromosoma', digits = 1, format = 'pipe')
+
+```
+
+## Representación gráfica
+
+```{r Grafica, echo=FALSE, warning=FALSE, message=FALSE,fig.cap="Figura 2.Relación entre SNPs y SNPs fuera de filtro*", fig.align='center', out.width='65%' }
+Caluclos %>% 
+  ggplot(aes(x = Total_SNPs,y = PORCENTAJE)) + 
+  geom_jitter() + 
+  geom_smooth(method = lm) +
+  labs(x = "Total de SNPs", y = "Porcentaje de no filtrados") 
+```
+
+# Coclusiones
+
+La hipótesis inicial, que postulaba: **"Los cromosomas con mayor número
+de SNPs presentan mayor porcentaje de SNPs que no pasan el filtro de
+calidad"**, ha sido refutada por los resultados de este análisis.
+Específicamente la Distribución de SNPs Total: Se observó que, si bien
+el número total de SNPs varía considerablemente entre los cromosomas, la
+frecuencia de fallos en el control de calidad es relativamente uniforme
+o está influenciada por otros factores.
+
+# Bibliografía
